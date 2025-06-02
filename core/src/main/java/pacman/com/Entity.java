@@ -15,7 +15,7 @@ public abstract class Entity {
         this.size = size;
     }
 
-    public abstract void update(float delta);
+    public abstract void update(float delta); // Metode abstrak untuk pembaruan
 
     public void render(SpriteBatch batch) {
         batch.draw(texture, position.x, position.y, size.x, size.y);
