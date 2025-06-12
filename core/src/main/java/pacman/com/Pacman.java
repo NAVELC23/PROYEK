@@ -15,25 +15,26 @@ public class Pacman extends Entity {
     private boolean poweredUp;
     private float powerUpTime;
     private Maze maze;
-    private Vector2 currentDirection; // Menambahkan currentDirection untuk Pacman
+    private Vector2 currentDirection; // Added currentDirection for Pacman
 
     public Pacman(Vector2 startPosition, Maze maze) {
-        super(startPosition, "pacmanRight.png", new Vector2(30, 30)); // Ukuran 30x30
-        leftTexture = new Texture("pacmanLeft.png");
-        rightTexture = new Texture("pacmanRight.png");
-        upTexture = new Texture("pacmanUp.png");
-        downTexture = new Texture("pacmanDown.png");
-        speed = 150f;
-        poweredUp = false;
-        powerUpTime = 0;
-        this.maze = maze;
-        this.currentDirection = new Vector2(1, 0); // Default arah kanan
+        super(startPosition, "pacmanRight.png", new Vector2(30, 30)); // Size 30x30
+        leftTexture = new Texture("pacmanLeft.png"); //
+        rightTexture = new Texture("pacmanRight.png"); //
+        upTexture = new Texture("pacmanUp.png"); //
+        downTexture = new Texture("pacmanDown.png"); //
+        speed = 150f; //
+        poweredUp = false; //
+        powerUpTime = 0; //
+        this.maze = maze; //
+        this.currentDirection = new Vector2(1, 0); // Default direction to right
     }
 
     @Override
     public void update(float delta) {
         Vector2 desiredMove = new Vector2(0, 0);
 
+        // Handle input for direction and texture changes
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             desiredMove.x = -speed * delta;
             texture = leftTexture;
@@ -51,33 +52,34 @@ public class Pacman extends Entity {
             texture = downTexture;
             currentDirection.set(0, -1);
         } else {
-            // Jika tidak ada input, Pac-Man berhenti
+            // If no input, Pac-Man stops
             currentDirection.set(0, 0);
         }
 
-        // Coba bergerak secara horizontal
+        // Attempt to move horizontally, checking for wall collisions
         Vector2 potentialX = new Vector2(position.x + desiredMove.x, position.y);
         Rectangle boundsX = new Rectangle(potentialX.x, potentialX.y, size.x, size.y);
-        if (!maze.collidesWithWall(boundsX)) {
+        if (!maze.collidesWithWall(boundsX)) { //
             position.x = potentialX.x;
         }
 
-        // Coba bergerak secara vertikal
+        // Attempt to move vertically, checking for wall collisions
         Vector2 potentialY = new Vector2(position.x, position.y + desiredMove.y);
         Rectangle boundsY = new Rectangle(potentialY.x, potentialY.y, size.x, size.y);
-        if (!maze.collidesWithWall(boundsY)) {
+        if (!maze.collidesWithWall(boundsY)) { //
             position.y = potentialY.y;
         }
 
-        // Menjaga Pacman tetap di dalam batas maze (Tambahan keamanan)
+        // Keep Pac-Man within maze boundaries (additional safety)
         position.x = Math.max(0, Math.min(maze.getWidth() - size.x, position.x));
         position.y = Math.max(0, Math.min(maze.getHeight() - size.y, position.y));
 
-        if (poweredUp) {
-            powerUpTime -= delta;
-            if (powerUpTime <= 0) {
-                poweredUp = false;
-                texture = rightTexture; // Kembali ke tekstur normal
+        // Handle power-up duration
+        if (poweredUp) { //
+            powerUpTime -= delta; //
+            if (powerUpTime <= 0) { //
+                poweredUp = false; //
+                texture = rightTexture; // Revert to normal texture
             }
         }
     }
@@ -94,9 +96,9 @@ public class Pacman extends Entity {
         this.poweredUp = poweredUp;
         this.powerUpTime = duration;
         if (poweredUp) {
-            texture = new Texture("PACMAN GELAP.png");
+            texture = new Texture("ASET PACMAN GELAP.png"); // Change texture when powered up
         } else {
-            texture = rightTexture;
+            texture = rightTexture; // Revert texture when power up ends
         }
     }
 
@@ -106,7 +108,7 @@ public class Pacman extends Entity {
 
     @Override
     public void dispose() {
-        super.dispose();
+        super.dispose(); // Dispose base class texture
         leftTexture.dispose();
         rightTexture.dispose();
         upTexture.dispose();

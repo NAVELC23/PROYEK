@@ -3,7 +3,7 @@ package pacman.com;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector2; // Import Vector2
+import com.badlogic.gdx.math.Vector2;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,146 +14,104 @@ public class Maze {
     private float height;
     private float tileSize;
 
-    public Maze(float width, float height) {
-        this.width = width;
-        this.height = height;
-        this.tileSize = 40f; // Setiap tile adalah 40x40 piksel
-        this.wallTexture = new Texture("wall.png");
-        this.walls = new ArrayList<>();
-        initializeWalls();
+    // Define maze dimensions: 18 columns x 19 rows
+    private final int TOTAL_COLS = 18; // Total columns (including walls)
+    private final int TOTAL_ROWS = 19; // Total rows (including walls)
+
+    public Maze(float initialWidth, float initialHeight) { // These parameters are not used for maze size
+        this.tileSize = 40f; // Tile size, 40x40 pixels
+        this.wallTexture = new Texture("wall.png"); //
+        this.walls = new ArrayList<>(); //
+
+        // Set maze width and height based on TOTAL_COLS and TOTAL_ROWS
+        this.width = TOTAL_COLS * tileSize; //
+        this.height = TOTAL_ROWS * tileSize; //
+
+        initializeWalls(); //
     }
 
     private void initializeWalls() {
-        walls.clear(); // Bersihkan dinding yang ada
+        walls.clear();
 
-        // Desain maze 19x21 tiles berdasarkan map.jpg
-        // 'X' untuk dinding, ' ' untuk jalur
-        // Karena di gambar Y=0 adalah baris paling atas, kita akan membalik urutannya
-        // sehingga row[0] di array ini akan digambar di Y tertinggi di layar.
-        String[] mazeLayout = {
-            "XXXXXXXXXXXXXXXXXXX", // Row 0 (atas) -> Y = 20 * tileSize
-            "X X X X X X X X X X", // Row 1
-            "X X X X X X X X X X", // Row 2
-            "X X X X X X X X X X", // Row 3
-            "X X X X X X X X X X", // Row 4
-            "X X X X X X X X X X", // Row 5
-            "X X X X X X X X X X", // Row 6
-            "X X X X X X X X X X", // Row 7
-            "X O O O X X X X X X", // Row 8 (area hantu)
-            "X X X X b p o r X X", // Row 9 (hantu P,O,R,B di gambar ada di sini, kita pakai sesuai posisi mereka)
-            "X O O O X X X X X X", // Row 10
-            "X X X X X X X X X X", // Row 11
-            "X X X X X X X X X X", // Row 12
-            "X X X X X X X X X X", // Row 13
-            "X X X X X X X X P X", // Row 14 (Pacman di gambar)
-            "X X X X X X X X X X", // Row 15
-            "X X X X X X X X X X", // Row 16
-            "X X X X X X X X X X", // Row 17
-            "X X X X X X X X X X", // Row 18
-            "X X X X X X X X X X", // Row 19
-            "XXXXXXXXXXXXXXXXXXX"  // Row 20 (bawah) -> Y = 0 * tileSize
-        };
-
-        // Mengisi array walls berdasarkan mazeLayout
-        // Loop dari baris paling atas di gambar (indeks 0) hingga paling bawah (indeks 20)
-        // Y layar akan dihitung terbalik: (mazeLayout.length - 1 - y_index_array) * tileSize
-        for (int y = 0; y < mazeLayout.length; y++) {
-            String rowString = mazeLayout[y];
-            for (int x = 0; x < rowString.length(); x++) {
-                if (rowString.charAt(x) == 'X') {
-                    // Konversi indeks baris array ke koordinat y di layar.
-                    // Jika mazeLayout[0] adalah baris paling atas (Y tertinggi), maka:
-                    // y_screen = (total_rows - 1 - current_row_index) * tileSize
-                    float wallY = (mazeLayout.length - 1 - y) * tileSize;
-                    addWall(x * tileSize, wallY);
-                }
-            }
+        // Build the outer wall frame
+        // Bottom row (row 0)
+        for (int x = 0; x < TOTAL_COLS; x++) {
+            addWall(x * tileSize, 0 * tileSize);
         }
 
-        // Tambahkan dinding khusus yang mungkin tidak tercapture di map.jpg sebagai 'X'
-        // Ini adalah interpretasi dari grid maze yang diberikan.
-        // Anda mungkin perlu menyesuaikan ini secara manual untuk mencocokkan persis gambar.
-        // Contoh: kotak di tengah, jalur horizontal/vertikal.
-        // Saya akan mencoba mendekati struktur utama dari gambar.
-        // Kita akan menggunakan pendekatan `String[]` secara ketat untuk maze ini.
-        // 'O' di gambar kemungkinan adalah jalur atau dot.
-        // Untuk karakter 'b', 'p', 'o', 'r', 'P' di gambar: itu adalah posisi entitas, bukan dinding.
-        // Jadi, tempat-tempat itu haruslah jalur.
+        // Top row (row TOTAL_ROWS - 1)
+        for (int x = 0; x < TOTAL_COLS; x++) {
+            addWall(x * tileSize, (TOTAL_ROWS - 1) * tileSize);
+        }
 
-        // Membentuk maze yang lebih akurat sesuai gambar dengan pola 'X' dan ' '.
-        // Saya akan menggunakan `String[] mazeLayout` di atas secara eksklusif.
-        // Beberapa baris di map.jpg tidak penuh dengan X atau O. Asumsi kosong = jalur.
-        // Contoh: row 0 adalah XXXXX..., row 1 adalah X...X.
-        // Perhatikan baris 0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 13, 15, 16, 17, 18, 19, 20
-        // Dari gambar, tampak ada pola 'X' di tepi dan 'X' di tengah.
-        // Mari kita buat ulang layout string yang lebih akurat dengan gambar.
-        // Kolom 0-18 (19 kolom), Baris 0-20 (21 baris)
+        // Leftmost column (col 0), from row 1 to (TOTAL_ROWS - 2)
+        for (int y = 1; y < TOTAL_ROWS - 1; y++) {
+            addWall(0 * tileSize, y * tileSize);
+        }
 
-        String[] preciseMazeLayout = {
-            "XXXXXXXXXXXXXXXXXXX", // 0
-            "X X X X X X X X X X", // 1
-            "X XXXX X X XXXX X X", // 2
-            "X X  X X X X  X X X", // 3
-            "X X  X X X X  X X X", // 4
-            "X X  X X X X  X X X", // 5
-            "X XXXX X X XXXX X X", // 6
-            "X X X X X X X X X X", // 7
-            "X O O O X X X X X X", // 8 (O di gambar berarti jalur)
-            "X X X X X X X X X X", // 9 (B, P, O, R berada di sini, jadi ini jalur)
-            "X O O O X X X X X X", // 10
-            "X X X X X X X X X X", // 11
-            "X X X X X X X X X X", // 12
-            "X X X X X X X X X X", // 13
-            "X X X X X X X X X X", // 14 (P ada di sini, jadi ini jalur)
-            "X X X X X X X X X X", // 15
-            "X X X X X X X X X X", // 16
-            "X X X X X X X X X X", // 17
-            "X X X X X X X X X X", // 18
-            "X X X X X X X X X X", // 19
-            "XXXXXXXXXXXXXXXXXXX"  // 20
-        };
+        // Rightmost column (col TOTAL_COLS - 1), from row 1 to (TOTAL_ROWS - 2)
+        for (int y = 1; y < TOTAL_ROWS - 1; y++) {
+            addWall((TOTAL_COLS - 1) * tileSize, y * tileSize);
+        }
 
-        // Saya akan menginterpretasikan 'O' di gambar sebagai jalur yang tidak ada dindingnya.
-        // Dan area 'b', 'p', 'o', 'r', 'P' juga sebagai jalur.
-        // Untuk itu, saya akan mengganti semua 'O' menjadi ' ' (spasi) untuk merepresentasikan jalur.
-        // Karakter entitas juga akan menjadi ' '.
+        // === Add small 'U' shaped obstacles ===
+        // Coordinates are tile positions (col, row). Remember Y=0 is bottom.
+        // Ensure they don't overlap with outer walls or each other.
 
-        String[] finalMazeLayout = {
-            "XXXXXXXXXXXXXXXXXXX", // 0
-            "X X X X X X X X X X", // 1
-            "X X X X X X X X X X", // 2
-            "X X X X X X X X X X", // 3
-            "X X X X X X X X X X", // 4
-            "X X X X X X X X X X", // 5
-            "X X X X X X X X X X", // 6
-            "X X X X X X X X X X", // 7
-            "X           X X X X", // 8 (O O O X X X X X X di gambar)
-            "X X X X     X X X X", // 9 (X X X X b p o r X X di gambar. b,p,o,r = space)
-            "X           X X X X", // 10 (O O O X X X X X X di gambar)
-            "X X X X X X X X X X", // 11
-            "X X X X X X X X X X", // 12
-            "X X X X X X X X X X", // 13
-            "X X X X X X X P X X", // 14 (P di gambar)
-            "X X X X X X X X X X", // 15
-            "X X X X X X X X X X", // 16
-            "X X X X X X X X X X", // 17
-            "X X X X X X X X X X", // 18
-            "X X X X X X X X X X", // 19
-            "XXXXXXXXXXXXXXXXXXX"  // 20
-        };
+        // U facing up (around bottom-center)
+        addUObstacle(5, 3, "up"); // U at col 5, row 3, open upwards
 
-        // Mengisi array walls berdasarkan finalMazeLayout yang sudah diinterpretasikan
-        for (int y = 0; y < finalMazeLayout.length; y++) {
-            String rowString = finalMazeLayout[y];
-            for (int x = 0; x < rowString.length(); x++) {
-                if (rowString.charAt(x) == 'X') {
-                    // Konversi indeks baris array ke koordinat y di layar.
-                    // Karena `map.jpg` Y=0 di paling atas, maka
-                    // (jumlah baris total - 1 - indeks baris saat ini) akan memberikan Y dari bawah.
-                    float wallY = (finalMazeLayout.length - 1 - y) * tileSize;
-                    addWall(x * tileSize, wallY);
-                }
-            }
+        // U facing down (around top-center)
+        addUObstacle(TOTAL_COLS - 8, TOTAL_ROWS - 5, "down"); // U at col 10, row 14, open downwards
+
+        // U facing left (on the right side)
+        addUObstacle(TOTAL_COLS - 4, 7, "left"); // U at col 14, row 7, open to the left
+
+        // U facing right (on the left side)
+        addUObstacle(3, TOTAL_ROWS - 10, "right"); // U at col 3, row 9, open to the right
+    }
+
+    // Helper method to add a 'U' obstacle
+    private void addUObstacle(int startCol, int startRow, String orientation) {
+        // These coordinates are based on tile index (col, row)
+        // Remember screen Y is inverted compared to typical array row indexing
+
+        // Convert to pixel coordinates
+        float pixelX = startCol * tileSize;
+        float pixelY = startRow * tileSize;
+
+        switch (orientation) {
+            case "up": // Open upwards (bottom part is wall)
+                addWall(pixelX, pixelY);
+                addWall(pixelX + tileSize, pixelY);
+                addWall(pixelX + 2 * tileSize, pixelY);
+                addWall(pixelX, pixelY + tileSize);
+                addWall(pixelX + 2 * tileSize, pixelY + tileSize);
+                break;
+            case "down": // Open downwards (top part is wall)
+                addWall(pixelX, pixelY + tileSize);
+                addWall(pixelX + tileSize, pixelY + tileSize);
+                addWall(pixelX + 2 * tileSize, pixelY + tileSize);
+                addWall(pixelX, pixelY);
+                addWall(pixelX + 2 * tileSize, pixelY);
+                break;
+            case "left": // Open to the left (right part is wall)
+                addWall(pixelX + tileSize, pixelY);
+                addWall(pixelX + tileSize, pixelY + tileSize);
+                addWall(pixelX + tileSize, pixelY + 2 * tileSize);
+                addWall(pixelX, pixelY);
+                addWall(pixelX, pixelY + 2 * tileSize);
+                break;
+            case "right": // Open to the right (left part is wall)
+                addWall(pixelX, pixelY);
+                addWall(pixelX, pixelY + tileSize);
+                addWall(pixelX, pixelY + 2 * tileSize);
+                addWall(pixelX + tileSize, pixelY);
+                addWall(pixelX + tileSize, pixelY + 2 * tileSize);
+                break;
+            default:
+                // Handle error or default behavior
+                break;
         }
     }
 
@@ -167,8 +125,6 @@ public class Maze {
         }
     }
 
-    // Memeriksa tabrakan antara sebuah bounding box (misalnya, Pacman atau hantu) dengan dinding
-    // Ini adalah metode utama untuk deteksi tabrakan pergerakan.
     public boolean collidesWithWall(Rectangle boundingBox) {
         for (Rectangle wall : walls) {
             if (boundingBox.overlaps(wall)) {
@@ -178,11 +134,12 @@ public class Maze {
         return false;
     }
 
-    // Memeriksa apakah sebuah *titik* berada di dalam dinding
-    // Berguna untuk pengecekan lokasi spawn atau dot
+    // Method to check if a point is within a wall
     public boolean isWallAt(float x, float y) {
+        // Create a small rectangle at the checked point
+        Rectangle checkRect = new Rectangle(x, y, 1, 1);
         for (Rectangle wall : walls) {
-            if (wall.contains(x, y)) {
+            if (wall.overlaps(checkRect)) {
                 return true;
             }
         }
@@ -206,6 +163,8 @@ public class Maze {
     }
 
     public void dispose() {
-        wallTexture.dispose();
+        if (wallTexture != null) { // Ensure texture exists before disposing
+            wallTexture.dispose();
+        }
     }
 }
