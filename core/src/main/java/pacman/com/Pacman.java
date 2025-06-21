@@ -4,82 +4,95 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Rectangle; // Import Rectangle
+import com.badlogic.gdx.math.Rectangle;
 
 public class Pacman extends Entity {
-    private Texture leftTexture;
-    private Texture rightTexture;
-    private Texture upTexture;
-    private Texture downTexture;
-    private float speed;
+    private Texture leftTexture, rightTexture, upTexture, downTexture;
     private boolean poweredUp;
     private float powerUpTime;
     private Maze maze;
-    private Vector2 currentDirection; // Menambahkan currentDirection untuk Pacman
+    private Vector2 currentDirection;
+    private Vector2 nextDirection;
+    private Vector2 targetPosition;
+    private boolean isMoving;
+    private float moveSpeed = 100f; // pixel per second
 
     public Pacman(Vector2 startPosition, Maze maze) {
-        super(startPosition, "pacmanRight.png", new Vector2(30, 30)); // Ukuran 30x30
+        super(startPosition, "pacmanRight.png", new Vector2(maze.getTileSize() * 0.85f, maze.getTileSize() * 0.85f));
+        this.maze = maze;
         leftTexture = new Texture("pacmanLeft.png");
         rightTexture = new Texture("pacmanRight.png");
         upTexture = new Texture("pacmanUp.png");
         downTexture = new Texture("pacmanDown.png");
-        speed = 150f;
         poweredUp = false;
         powerUpTime = 0;
-        this.maze = maze;
-        this.currentDirection = new Vector2(1, 0); // Default arah kanan
+
+        currentDirection = new Vector2(1, 0); // mulai ke kanan
+        nextDirection = new Vector2(1, 0);
+        targetPosition = new Vector2(position).add(currentDirection.cpy().scl(maze.getTileSize()));
+        isMoving = true; // mulai langsung gerak
     }
 
     @Override
     public void update(float delta) {
-        Vector2 desiredMove = new Vector2(0, 0);
+        float stepSize = maze.getTileSize();
 
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            desiredMove.x = -speed * delta;
+        // Input arah baru (hanya disimpan dulu)
+        if (Gdx.input.isKeyJustPressed(Input.Keys.A)) {
+            nextDirection.set(-1, 0);
             texture = leftTexture;
-            currentDirection.set(-1, 0);
-        } else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            desiredMove.x = speed * delta;
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.D)) {
+            nextDirection.set(1, 0);
             texture = rightTexture;
-            currentDirection.set(1, 0);
-        } else if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
-            desiredMove.y = speed * delta;
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+            nextDirection.set(0, 1);
             texture = upTexture;
-            currentDirection.set(0, 1);
-        } else if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-            desiredMove.y = -speed * delta;
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+            nextDirection.set(0, -1);
             texture = downTexture;
-            currentDirection.set(0, -1);
-        } else {
-            // Jika tidak ada input, Pac-Man berhenti
-            currentDirection.set(0, 0);
         }
 
-        // Coba bergerak secara horizontal
-        Vector2 potentialX = new Vector2(position.x + desiredMove.x, position.y);
-        Rectangle boundsX = new Rectangle(potentialX.x, potentialX.y, size.x, size.y);
-        if (!maze.collidesWithWall(boundsX)) {
-            position.x = potentialX.x;
+        if (isMoving) {
+            // Bergerak menuju target secara halus
+            Vector2 directionToTarget = new Vector2(targetPosition).sub(position).nor();
+            float distanceToMove = moveSpeed * delta;
+            float distanceRemaining = targetPosition.dst(position);
+
+            if (distanceToMove >= distanceRemaining) {
+                position.set(targetPosition);
+                isMoving = false;
+            } else {
+                position.add(directionToTarget.scl(distanceToMove));
+            }
         }
 
-        // Coba bergerak secara vertikal
-        Vector2 potentialY = new Vector2(position.x, position.y + desiredMove.y);
-        Rectangle boundsY = new Rectangle(potentialY.x, potentialY.y, size.x, size.y);
-        if (!maze.collidesWithWall(boundsY)) {
-            position.y = potentialY.y;
+        if (!isMoving) {
+            // Setelah selesai gerak ke tile, coba arah baru jika bisa
+            if (canMove(nextDirection)) {
+                currentDirection.set(nextDirection);
+            }
+
+            // Coba lanjut ke tile berikutnya
+            if (canMove(currentDirection)) {
+                targetPosition.set(position).add(currentDirection.cpy().scl(stepSize));
+                isMoving = true;
+            }
         }
 
-        // Menjaga Pacman tetap di dalam batas maze (Tambahan keamanan)
-        position.x = Math.max(0, Math.min(maze.getWidth() - size.x, position.x));
-        position.y = Math.max(0, Math.min(maze.getHeight() - size.y, position.y));
-
+        // Power-up logic
         if (poweredUp) {
             powerUpTime -= delta;
             if (powerUpTime <= 0) {
                 poweredUp = false;
-                texture = rightTexture; // Kembali ke tekstur normal
+                texture = rightTexture;
             }
         }
+    }
+
+    private boolean canMove(Vector2 direction) {
+        Vector2 target = new Vector2(position).add(direction.cpy().scl(maze.getTileSize()));
+        Rectangle bounds = new Rectangle(target.x, target.y, size.x, size.y);
+        return !maze.collidesWithWall(bounds);
     }
 
     public Vector2 getCenter() {
@@ -109,9 +122,7 @@ public class Pacman extends Entity {
     }
 
     public void resetDirection() {
-        // Atur kembali arah internal ke kanan (atau arah default lainnya)
         this.currentDirection.set(1, 0);
-        // Atur kembali tekstur yang digunakan agar cocok dengan arah
         this.texture = this.rightTexture;
     }
 
