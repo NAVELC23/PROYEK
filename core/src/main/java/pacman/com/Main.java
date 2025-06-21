@@ -72,7 +72,9 @@ public class Main extends ApplicationAdapter {
         maze = new Maze();
 
         // --- KOORDINAT SPAWN SUDAH DIPASTIKAN AMAN UNTUK LABIRIN BARU ---
-        Vector2 pacmanStartPos = new Vector2(9 * maze.getTileSize() + 5, 5 * maze.getTileSize() + 5);
+        Vector2 pacmanStartPos = new Vector2(
+            9 * maze.getTileSize() + 5,
+            5 * maze.getTileSize() + 5);
         pacman = new Pacman(pacmanStartPos, maze);
 
         ghosts = new Array<>();
@@ -184,6 +186,7 @@ public class Main extends ApplicationAdapter {
                     ghost.respawn();
                     score += 200;
                 } else if (!pacman.isPoweredUp()) {
+                    pacman.die();
                     lives--;
                     if (lives <= 0) {
                         currentState = GameState.GAME_OVER;
@@ -197,8 +200,7 @@ public class Main extends ApplicationAdapter {
     }
 
     private void resetPositionsAfterDeath() {
-        pacman.getPosition().set(9 * maze.getTileSize() + 5, 5 * maze.getTileSize() + 5);
-        pacman.resetDirection();
+        pacman.respawn(); // Ganti ini dari sekedar set position
         for(Ghost ghost : ghosts) {
             ghost.respawn();
         }
