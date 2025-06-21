@@ -3,6 +3,8 @@ package pacman.com;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -45,6 +47,8 @@ public class Main extends ApplicationAdapter {
 
     private GameState currentState;
     private float respawnTimer;
+    private Music music, musicScared;
+    private Sound soundDie;
 
     @Override
     public void create() {
@@ -70,6 +74,9 @@ public class Main extends ApplicationAdapter {
 
     private void startGame() {
         maze = new Maze();
+        music = Gdx.audio.newMusic(Gdx.files.internal("Pac-man theme remix - By Arsenic1987.mp3"));
+        music.setLooping(true);
+        music.setVolume(.3f);
 
         // --- KOORDINAT SPAWN SUDAH DIPASTIKAN AMAN UNTUK LABIRIN BARU ---
         Vector2 pacmanStartPos = new Vector2(
@@ -111,6 +118,7 @@ public class Main extends ApplicationAdapter {
             renderMenu();
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
                 currentState = GameState.PLAYING;
+                music.play();
             }
             return;
         }
@@ -187,6 +195,8 @@ public class Main extends ApplicationAdapter {
                     score += 200;
                 } else if (!pacman.isPoweredUp()) {
                     pacman.die();
+                    soundDie = Gdx.audio.newSound(Gdx.files.internal("Pac-Man Death - Sound Effect (HD).mp3"));
+                    soundDie.play();
                     lives--;
                     if (lives <= 0) {
                         currentState = GameState.GAME_OVER;
@@ -216,6 +226,7 @@ public class Main extends ApplicationAdapter {
         if (pacman != null) pacman.dispose();
         if(ghosts != null) { for(Ghost g : ghosts) g.dispose(); }
         if(powerUps != null) { for(PowerUp p : powerUps) p.dispose(); }
+        if(music != null) music.stop();
     }
 
     // ... Metode-metode lain (initializeDots, spawnRandomPowerUp, dll. biarkan seperti yang sudah ada) ...
@@ -233,6 +244,7 @@ public class Main extends ApplicationAdapter {
         if (font != null) font.dispose();
         if (menuBackground != null) menuBackground.dispose();
         if (dotTexture != null) dotTexture.dispose();
+        if (music != null) music.dispose();
     }
 
     // Metode di bawah ini tidak ada perubahan, salin saja jika Anda belum punya
@@ -307,8 +319,10 @@ public class Main extends ApplicationAdapter {
             if (powerUp.isActive() && pacmanBounds.overlaps(new Rectangle(powerUp.getPosition().x, powerUp.getPosition().y, powerUp.getSize().x, powerUp.getSize().y))) {
                 score += powerUp.getScoreValue();
                 if (powerUp instanceof PowerFood) {
-                    pacman.setPoweredUp(true, 10f);
+                    pacman.setPoweredUp(true, 5f);
                     for (Ghost ghost : ghosts) ghost.setScared(true);
+                    musicScared = Gdx.audio.newMusic(Gdx.files.internal("Pac man scared ghost sound.mp3"));
+                    musicScared.play();
                 }
                 powerUp.collect();
             }

@@ -189,7 +189,7 @@ public class Ghost extends Entity {
         this.isScared = scared;
         this.texture = scared ? scaredTexture : normalTexture;
         if (scared) {
-            this.scaredTime = 8f;
+            this.scaredTime = 10f;
         }
     }
 
