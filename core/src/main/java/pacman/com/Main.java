@@ -211,7 +211,6 @@ public class Main extends ApplicationAdapter {
     }
 
     private void disposeCurrentGameAssets() {
-        if (dotTexture != null) dotTexture.dispose();
         if (pacman != null) pacman.dispose();
         if(ghosts != null) { for(Ghost g : ghosts) g.dispose(); }
         if(powerUps != null) { for(PowerUp p : powerUps) p.dispose(); }

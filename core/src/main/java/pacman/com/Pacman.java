@@ -15,11 +15,17 @@ public class Pacman extends Entity {
     private Vector2 nextDirection;
     private Vector2 targetPosition;
     private boolean isMoving;
-    private float moveSpeed = 100f; // pixel per second
+    private float moveSpeed = 100f;
+
+    // Tambahan
+    private boolean isDead = false;
+    private Vector2 spawnPosition;
 
     public Pacman(Vector2 startPosition, Maze maze) {
         super(startPosition, "pacmanRight.png", new Vector2(maze.getTileSize() * 0.85f, maze.getTileSize() * 0.85f));
         this.maze = maze;
+        this.spawnPosition = new Vector2(startPosition);
+
         leftTexture = new Texture("pacmanLeft.png");
         rightTexture = new Texture("pacmanRight.png");
         upTexture = new Texture("pacmanUp.png");
@@ -27,14 +33,16 @@ public class Pacman extends Entity {
         poweredUp = false;
         powerUpTime = 0;
 
-        currentDirection = new Vector2(1, 0); // mulai ke kanan
+        currentDirection = new Vector2(1, 0);
         nextDirection = new Vector2(1, 0);
         targetPosition = new Vector2(position).add(currentDirection.cpy().scl(maze.getTileSize()));
-        isMoving = true; // mulai langsung gerak
+        isMoving = true;
     }
 
     @Override
     public void update(float delta) {
+        if (isDead) return;
+
         float stepSize = maze.getTileSize();
 
         // Input arah baru (hanya disimpan dulu)
@@ -53,7 +61,6 @@ public class Pacman extends Entity {
         }
 
         if (isMoving) {
-            // Bergerak menuju target secara halus
             Vector2 directionToTarget = new Vector2(targetPosition).sub(position).nor();
             float distanceToMove = moveSpeed * delta;
             float distanceRemaining = targetPosition.dst(position);
@@ -67,19 +74,16 @@ public class Pacman extends Entity {
         }
 
         if (!isMoving) {
-            // Setelah selesai gerak ke tile, coba arah baru jika bisa
             if (canMove(nextDirection)) {
                 currentDirection.set(nextDirection);
             }
 
-            // Coba lanjut ke tile berikutnya
             if (canMove(currentDirection)) {
                 targetPosition.set(position).add(currentDirection.cpy().scl(stepSize));
                 isMoving = true;
             }
         }
 
-        // Power-up logic
         if (poweredUp) {
             powerUpTime -= delta;
             if (powerUpTime <= 0) {
@@ -124,6 +128,22 @@ public class Pacman extends Entity {
     public void resetDirection() {
         this.currentDirection.set(1, 0);
         this.texture = this.rightTexture;
+    }
+
+    // Tambahan
+    public void die() {
+        isDead = true;
+        isMoving = false;
+    }
+
+    public void respawn() {
+        isDead = false;
+        position.set(spawnPosition);
+        currentDirection.set(1, 0);
+        nextDirection.set(1, 0);
+        targetPosition.set(position).add(currentDirection.cpy().scl(maze.getTileSize()));
+        texture = rightTexture;
+        isMoving = true;
     }
 
     @Override
