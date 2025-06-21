@@ -211,7 +211,6 @@ public class Main extends ApplicationAdapter {
     }
 
     private void disposeCurrentGameAssets() {
-        if (dotTexture != null) dotTexture.dispose();
         if (pacman != null) pacman.dispose();
         if(ghosts != null) { for(Ghost g : ghosts) g.dispose(); }
         if(powerUps != null) { for(PowerUp p : powerUps) p.dispose(); }
@@ -231,6 +230,7 @@ public class Main extends ApplicationAdapter {
         if (batch != null) batch.dispose();
         if (font != null) font.dispose();
         if (menuBackground != null) menuBackground.dispose();
+        if (dotTexture != null) dotTexture.dispose();
     }
 
     // Metode di bawah ini tidak ada perubahan, salin saja jika Anda belum punya

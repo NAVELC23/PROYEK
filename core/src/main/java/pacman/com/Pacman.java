@@ -94,8 +94,6 @@ public class Pacman extends Entity {
         this.poweredUp = poweredUp;
         this.powerUpTime = duration;
         if (poweredUp) {
-            texture = new Texture("PACMAN GELAP.png");
-        } else {
             texture = rightTexture;
         }
     }
