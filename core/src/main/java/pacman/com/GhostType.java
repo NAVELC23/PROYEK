@@ -1,10 +1,10 @@
 package pacman.com;
 
 public enum GhostType {
-    RED(0.5f), // Red Ghost with a speed multiplier
-    PINK(1.0f), // Pink Ghost with a speed multiplier
-    BLUE(0.5f), // Blue Ghost with a speed multiplier
-    ORANGE(1.0f); // Orange Ghost with a speed multiplier
+    RED(1.1f), // Red Ghost with a speed multiplier
+    PINK(1.1f), // Pink Ghost with a speed multiplier
+    BLUE(1.1f), // Blue Ghost with a speed multiplier
+    ORANGE(1.1f); // Orange Ghost with a speed multiplier
 
     private float speedMultiplier; //
 

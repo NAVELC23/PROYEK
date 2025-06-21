@@ -4,7 +4,7 @@ import com.badlogic.gdx.math.Vector2;
 
 public class PowerFood extends PowerUp {
     public PowerFood(Vector2 position) {
-        super(position, "powerFood.png", 10f); // PowerFood texture, 10-second duration
+        super(position, "powerFood.png", 15f); // PowerFood texture, 15-second duration
     }
 
     @Override

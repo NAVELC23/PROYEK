@@ -46,9 +46,11 @@ public class Main extends ApplicationAdapter {
     private Random random;
 
     private GameState currentState;
-    private float respawnTimer;
+    private float respawnTimer,powerUpRemainingTime;
     private Music music, musicScared;
     private Sound soundDie;
+
+
 
     @Override
     public void create() {
@@ -98,7 +100,7 @@ public class Main extends ApplicationAdapter {
         initializeDots();
 
         powerUps = new Array<>();
-        powerUpSpawnTimer = 10f;
+        powerUpSpawnTimer = 5f;
 
         score = 0;
         lives = 3;
@@ -160,7 +162,7 @@ public class Main extends ApplicationAdapter {
             powerUpSpawnTimer -= delta;
             if (powerUpSpawnTimer <= 0) {
                 spawnRandomPowerUp();
-                powerUpSpawnTimer = 15f + random.nextFloat() * 10f;
+                powerUpSpawnTimer = 8f + random.nextFloat() * 7f;
             }
 
             pacman.update(delta);
@@ -181,6 +183,21 @@ public class Main extends ApplicationAdapter {
                 currentState = GameState.PLAYING;
             }
         }
+
+        if (powerUpRemainingTime > 0) {
+            powerUpRemainingTime -= delta;
+            if (powerUpRemainingTime <= 0 && musicScared != null) {
+                musicScared.stop();
+                musicScared.dispose();
+                musicScared = null;
+
+                // Reset ghost state jika perlu
+                for (Ghost ghost : ghosts) {
+                    ghost.setScared(false);
+                }
+            }
+        }
+
     }
 
     private void checkGhostCollisions() {
@@ -245,6 +262,7 @@ public class Main extends ApplicationAdapter {
         if (menuBackground != null) menuBackground.dispose();
         if (dotTexture != null) dotTexture.dispose();
         if (music != null) music.dispose();
+        if (musicScared != null) {musicScared.stop();musicScared.dispose();}
     }
 
     // Metode di bawah ini tidak ada perubahan, salin saja jika Anda belum punya
@@ -281,7 +299,7 @@ public class Main extends ApplicationAdapter {
     private void spawnRandomPowerUp() {
         int activePowerUpsCount = 0;
         for (PowerUp pu : powerUps) if (pu.isActive()) activePowerUpsCount++;
-        if (activePowerUpsCount >= 2) return;
+        if (activePowerUpsCount >= 5) return;
 
         float x, y;
         int attempts = 0;
@@ -296,9 +314,9 @@ public class Main extends ApplicationAdapter {
 
         if (attempts < 100) {
             float rand = random.nextFloat();
-            if (rand < 0.4f) powerUps.add(new Cherry(new Vector2(x, y)));
-            else if (rand < 0.8f) powerUps.add(new Cherry2(new Vector2(x, y)));
-            else powerUps.add(new PowerFood(new Vector2(x, y)));
+            if (rand < 0.35f) powerUps.add(new Cherry(new Vector2(x, y)));  //35%
+            else if (rand < 0.60f) powerUps.add(new Cherry2(new Vector2(x, y))); //25%
+            else powerUps.add(new PowerFood(new Vector2(x, y))); //45%
         }
     }
 
@@ -322,7 +340,10 @@ public class Main extends ApplicationAdapter {
                     pacman.setPoweredUp(true, 5f);
                     for (Ghost ghost : ghosts) ghost.setScared(true);
                     musicScared = Gdx.audio.newMusic(Gdx.files.internal("Pac man scared ghost sound.mp3"));
+                    musicScared.setLooping(true);
                     musicScared.play();
+                    powerUpRemainingTime = 5f;
+
                 }
                 powerUp.collect();
             }
