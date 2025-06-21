@@ -208,4 +208,5 @@ public class Ghost extends Entity {
         normalTexture.dispose();
         scaredTexture.dispose();
     }
+
 }
