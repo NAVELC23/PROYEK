@@ -145,6 +145,11 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void render() {
+        //Cek restart di awal (bekerja di semua kondisi)
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            restartGame();
+        }
+
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -204,6 +209,10 @@ public class Main extends ApplicationAdapter {
     }
 
     private void update(float delta) {
+        if (inMenu || gameOver || gameWon) {
+            return; // Don't update game logic if in menu/game over/game won
+        }
+
         gameTime += delta; //
         powerUpSpawnTimer -= delta; //
 
@@ -228,10 +237,31 @@ public class Main extends ApplicationAdapter {
             gameWon = true; //
         }
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) { // Restart game on 'R' key press
-            dispose(); // Dispose resources before restart
-            create();  // Call create() to start a new game
-        }
+    }
+
+    // Tambahkan method baru untuk restart game
+    private void restartGame() {
+        // 1. Hapus resource lama
+        dispose();
+
+        // 2. Recreate CORE OBJECTS (wajib!)
+        batch = new SpriteBatch(); // <-- SpriteBatch HARUS dibuat ulang
+        font = new BitmapFont();   // <-- Font juga
+        font.getData().setScale(2);
+
+        // 3. Reload texture
+        menuBackground = new Texture("MainScreenMenu.png");
+        dotTexture = new Texture("dot.png");
+
+        // 4. Reset game state
+        gameOver = false;
+        gameWon = false;
+        inMenu = false;
+        score = 0;
+        lives = 3;
+
+        // 5. Inisialisasi ulang game
+        startGame(); // Panggil startGame() untuk setup maze, pacman, dll
     }
 
     private void spawnRandomPowerUp() {
@@ -319,14 +349,14 @@ public class Main extends ApplicationAdapter {
                     lives--; // Lose a life
                     if (lives <= 0) { // Game Over
                         gameOver = true; //
-                    } else {
-                        // Reset Pac-Man and all ghosts to initial positions
-                        pacman.getPosition().set(9 * maze.getTileSize() + 5,
-                            14 * maze.getTileSize() + 5); //
-                        for (Ghost g : ghosts) { //
-                            g.respawn(); // Reset ghost position
-                        }
                     }
+                    // Reset Pac-Man and all ghosts to initial positions
+                    pacman.getPosition().set(9 * maze.getTileSize() + 5,
+                        14 * maze.getTileSize() + 5); //
+                    for (Ghost g : ghosts) { //
+                        g.respawn(); // Reset ghost position
+                    }
+                    break;
                 }
             }
         }
@@ -341,17 +371,13 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void dispose() {
-        batch.dispose(); //
-        font.dispose(); //
-        menuBackground.dispose(); //
-        if (maze != null) maze.dispose(); //
-        if (pacman != null) pacman.dispose(); //
-        if (dotTexture != null) dotTexture.dispose(); //
-        for (Ghost ghost : ghosts) { //
-            ghost.dispose(); //
-        }
-        for (PowerUp powerUp : powerUps) { //
-            powerUp.dispose(); //
-        }
+        if (batch != null) batch.dispose();
+        if (font != null) font.dispose();
+        if (menuBackground != null) menuBackground.dispose();
+        if (maze != null) maze.dispose();
+        if (pacman != null) pacman.dispose();
+        if (dotTexture != null) dotTexture.dispose();
+        for (Ghost ghost : ghosts) ghost.dispose();
+        for (PowerUp powerUp : powerUps) powerUp.dispose();
     }
 }
