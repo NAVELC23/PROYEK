@@ -1,5 +1,6 @@
 package pacman.com;
 
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public abstract class PowerUp extends Entity {
@@ -22,6 +23,10 @@ public abstract class PowerUp extends Entity {
                 active = false; // Deactivate if time runs out
             }
         }
+    }
+
+    public Rectangle getBounds() {
+        return new Rectangle(position.x, position.y, size.x, size.y);
     }
 
     public abstract int getScoreValue(); // Abstract method for score value
