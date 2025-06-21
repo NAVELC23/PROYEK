@@ -142,6 +142,8 @@ public class Pacman extends Entity {
         targetPosition.set(position).add(currentDirection.cpy().scl(maze.getTileSize()));
         texture = rightTexture;
         isMoving = true;
+        poweredUp = false; // Reset power-up state
+        powerUpTime = 0;  // Reset power-up timer
     }
 
     @Override
