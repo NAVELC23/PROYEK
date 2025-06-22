@@ -55,7 +55,7 @@ public class Main extends ApplicationAdapter {
     private float warningTimer; // Waktu untuk peringatan sebelum labirin berubah
     private boolean isWarningActive;
     private int nextLayoutIndex;
-    private Sound soundWarning, soundShift;
+    private Sound soundWarning;
 
     @Override
     public void create() {
@@ -75,11 +75,12 @@ public class Main extends ApplicationAdapter {
         viewport.apply(); // Terapkan viewport
         camera.position.set(viewport.getWorldWidth() / 2, viewport.getWorldHeight() / 2, 0);
 
-        //soundWarning = Gdx.audio.newSound(Gdx.files.internal("warning.mp3")); // Ganti dengan file suara Anda
-        //soundShift = Gdx.audio.newSound(Gdx.files.internal("shift.mp3")); // Ganti dengan file suara Anda
+        soundWarning = Gdx.audio.newSound(Gdx.files.internal("Nuclear alarm siren sound effect NUKE.mp3")); // Ganti dengan file suara Anda
+
 
         // 3. MULAI GAME setelah semua komponen dasar siap
         startGame();
+        soundWarning.stop();
     }
 
     private void startGame() {
@@ -152,6 +153,7 @@ public class Main extends ApplicationAdapter {
         } else {
             maze.render(batch);
         }
+
         // -----------------------------------------
         Vector2 pacmanCenter = pacman.getCenter();
         Vector2 pacmanDirection = pacman.getDirection().cpy().nor();
@@ -246,11 +248,11 @@ public class Main extends ApplicationAdapter {
         if (isWarningActive) {
             warningTimer -= delta;
             if (warningTimer <= 0) {
+                if (soundWarning != null) soundWarning.stop();
                 isWarningActive = false;
 
                 if (isShiftSafe(nextLayoutIndex)) {
                     maze.shiftLayout(nextLayoutIndex);
-                    if (soundShift != null) soundShift.play();
 
                     // --- PERBAIKAN #2: Hapus dot yang tidak valid, JANGAN buat ulang semua dot ---
                     pruneInvalidDots();
