@@ -1,21 +1,35 @@
 package pacman.com;
 
 import com.badlogic.gdx.ApplicationAdapter;
+//Base class utama LibGDX. override create(), render(), dispose() untuk bikin game loop-nya.
 import com.badlogic.gdx.Gdx;
+//Gdx adalah akses hal inti LibGDX (input, audio, file, dll).
 import com.badlogic.gdx.Input;
+//Input dipakai buat cek tombol keyboard (misalnya: Input.Keys.ENTER).
 import com.badlogic.gdx.audio.Music;
+//Music = untuk file audio panjang (seperti lagu background).
 import com.badlogic.gdx.audio.Sound;
+//Sound = untuk efek suara pendek (seperti suara mati atau makan).
 import com.badlogic.gdx.graphics.GL20;
+//Dipakai untuk Gdx.gl.glClear(). membersihkan layar di setiap frame (pakai OpenGL).
 import com.badlogic.gdx.graphics.OrthographicCamera;
+// Kamera 2D yang digunakan agar tampilan game bisa digeser/zoom sesuai kebutuhan.
 import com.badlogic.gdx.graphics.Texture;
+//Texture: untuk gambar (dot, pacman, hantu, background, dll).
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+//BitmapFont: untuk menampilkan teks seperti skor dan nyawa.
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+//SpriteBatch: menggambar semua objek dalam satu batch (efisien untuk performa).
 import com.badlogic.gdx.math.Rectangle;
+//Rectangle: dipakai untuk hitbox (tabrakan).
 import com.badlogic.gdx.math.Vector2;
+//Vector2: representasi posisi 2D (x dan y).
 import com.badlogic.gdx.utils.Array;
+//Array: array milik LibGDX, mirip ArrayList tapi lebih ringan.
 import com.badlogic.gdx.utils.viewport.FitViewport;
-
+//FitViewport: menyesuaikan tampilan game ke ukuran layar tapi tetap menjaga rasio aspek.
 import java.util.Random;
+//Untuk acak posisi power-up, menentukan jenis power-up, dan variasi lainnya.
 
 enum GameState {
     MENU,
@@ -26,12 +40,11 @@ enum GameState {
 }
 
 public class Main extends ApplicationAdapter {
-    private SpriteBatch batch;
-    private OrthographicCamera camera;
-    private FitViewport viewport;
-    private BitmapFont font;
-    private Texture menuBackground;
-    private Texture dotTexture;
+    private SpriteBatch batch; // untuk menggambar (gambar, font)
+    private OrthographicCamera camera; // kamera untuk atur tampilan game
+    private FitViewport viewport; // atur ukuran layar
+    private BitmapFont font; // teks skor & lives
+    private Texture menuBackground, dotTexture; // gambar background dan titik
 
     private Pacman pacman;
     private Array<Ghost> ghosts;
@@ -46,18 +59,21 @@ public class Main extends ApplicationAdapter {
     private Random random;
 
     private GameState currentState;
-    private float respawnTimer,powerUpRemainingTime;
-    private Music music, musicScared;
-    private Sound soundDie;
+    private float respawnTimer,powerUpRemainingTime; // untuk waktu hidup, untuk waktu power upnya
+    private Music music, musicScared; //suara musik dan musik ketika ada powerup
+    private Sound soundDie; //suara pas pacman mati
 
 
 
     @Override
     public void create() {
         batch = new SpriteBatch();
+        //Membuat SpriteBatch untuk menggambar objek 2D (gambar, tulisan, animasi).
         font = new BitmapFont();
         font.getData().setScale(2);
+        //Memperbesar ukuran font jadi 2x lipat dari ukuran standar. (contoh :score dan darahnya)
         menuBackground = new Texture("MainScreenMenu.png");
+        //Memuat gambar background untuk menu utama dari file gambar MainScreenMenu.png.
         random = new Random();
         camera = new OrthographicCamera();
 
@@ -67,6 +83,7 @@ public class Main extends ApplicationAdapter {
 
         // 2. SETELAH MAZE ADA, BARU BUAT VIEWPORT menggunakan ukurannya
         viewport = new FitViewport(maze.getWidth(), maze.getHeight(), camera);
+        //FitViewport menjaga rasio aspek saat jendela diresize.
         viewport.apply(); // Terapkan viewport
         camera.position.set(viewport.getWorldWidth() / 2, viewport.getWorldHeight() / 2, 0);
 
@@ -83,7 +100,7 @@ public class Main extends ApplicationAdapter {
         // --- KOORDINAT SPAWN SUDAH DIPASTIKAN AMAN UNTUK LABIRIN BARU ---
         Vector2 pacmanStartPos = new Vector2(
             9 * maze.getTileSize() + 5,
-            5 * maze.getTileSize() + 5);
+            5 * maze.getTileSize() + 5); //lokasi pacman
         pacman = new Pacman(pacmanStartPos, maze);
 
         ghosts = new Array<>();
@@ -91,93 +108,117 @@ public class Main extends ApplicationAdapter {
         ghosts.add(new Ghost(new Vector2(8 * maze.getTileSize() + 5, 10 * maze.getTileSize() + 5), GhostType.PINK, pacman, maze));
         ghosts.add(new Ghost(new Vector2(10 * maze.getTileSize() + 5, 10 * maze.getTileSize() + 5), GhostType.BLUE, pacman, maze));
         ghosts.add(new Ghost(new Vector2(9 * maze.getTileSize() + 5, 9 * maze.getTileSize() + 5), GhostType.ORANGE, pacman, maze));
-
+        //lokasi ghost
         dots = new Array<>();
         if (dotTexture == null) {
             dotTexture = new Texture("dot.png");
-        }
+        } // pointnya
 
-        initializeDots();
+        initializeDots(); // dimunculkan dotnya
 
-        powerUps = new Array<>();
-        powerUpSpawnTimer = 5f;
+        powerUps = new Array<>(); // skillnya dibuat
+        powerUpSpawnTimer = 5f; //waktu awal (timer) selama 5 detik sebelum power-up pertama muncul di dalam game.
 
-        score = 0;
-        lives = 3;
+        score = 0; // score awal
+        lives = 3; // darah awal
         currentState = GameState.MENU; // Mulai dari menu
-        gameTime = 0;
+        gameTime = 0; //waktu awal
     }
 
     @Override
     public void render() {
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        Gdx.gl.glClearColor(0, 0, 0, 1);// atur warna latar (hitam)
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT); //// bersihkan/tampilkan layar dengan warna itu
 
-        camera.update();
-        batch.setProjectionMatrix(camera.combined);
+        camera.update(); //Memperbarui posisi dan proyeksi kamera
+        batch.setProjectionMatrix(camera.combined); //Menyinkronkan SpriteBatch dengan kamera.
+        //Supaya objek yang digambar mengikuti pandangan kamera (zoom, posisi, dst).
 
+        //Jika game dalam mode menu, tampilkan layar menu (renderMenu()).
         if (currentState == GameState.MENU) {
             renderMenu();
+            //Jika user menekan ENTER, ubah state ke PLAYING dan mulai musik.
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
                 currentState = GameState.PLAYING;
                 music.play();
             }
             return;
         }
-
+        //Menjalankan logika game (gerak pacman, collision, timer, dll).
         update(Gdx.graphics.getDeltaTime());
 
         batch.begin();
+        //Semua objek 2D harus digambar di antara batch.begin() dan batch.end().
 
-        maze.render(batch);
+        maze.render(batch);//menggambar labirin.
         for (Rectangle dot : dots) { batch.draw(dotTexture, dot.x, dot.y, dot.width, dot.height); }
+        //menggambar semua titik makanan (dot).
         for (PowerUp powerUp : powerUps) { if (powerUp.isActive()) powerUp.render(batch); }
+        //menggambar power-up aktif.
         pacman.render(batch);
+        //menggambar pacman.
         for (Ghost ghost : ghosts) { ghost.render(batch); }
+        //menggambar ghost
 
         font.draw(batch, "Score: " + score, 20, viewport.getWorldHeight() - 20);
+        //mengambar score dan lokasinya
         font.draw(batch, "Lives: " + lives, viewport.getWorldWidth() - 150, viewport.getWorldHeight() - 20);
+        //mengambar darah dan lokasinya
 
+
+        //Menampilkan teks "GAME OVER" dan Menunggu tombol R ditekan untuk restart game
         if (currentState == GameState.GAME_OVER) {
             font.draw(batch, "GAME OVER", viewport.getWorldWidth() / 2 - 100, viewport.getWorldHeight() / 2 + 50);
             font.draw(batch, "Press R to restart", viewport.getWorldWidth() / 2 - 120, viewport.getWorldHeight() / 2);
             if (Gdx.input.isKeyJustPressed(Input.Keys.R)) restartGame();
+            //Sama seperti GAME_OVER, tapi untuk kasus menang.
         } else if (currentState == GameState.GAME_WON) {
             font.draw(batch, "YOU WIN!", viewport.getWorldWidth() / 2 - 100, viewport.getWorldHeight() / 2 + 50);
             font.draw(batch, "Press R to restart", viewport.getWorldWidth() / 2 - 120, viewport.getWorldHeight() / 2);
             if (Gdx.input.isKeyJustPressed(Input.Keys.R)) restartGame();
         }
-
+        //Selesai menggambar semua objek dalam frame ini.
+        //Frame lalu ditampilkan ke layar.
         batch.end();
     }
 
     private void update(float delta) {
+        //Kalau pemain menekan tombol R, game di-reset lewat restartGame()
+        // dan fungsi update() langsung berhenti (return).
         if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
             restartGame();
             return;
         }
-
+        //Kalau game dalam status PLAYING, maka:
         if (currentState == GameState.PLAYING) {
+            //Total waktu game ditambah.
             gameTime += delta;
+            //Hitung mundur timer Power-Up
             powerUpSpawnTimer -= delta;
+            //Setiap detik, timer dikurangi (delta).
             if (powerUpSpawnTimer <= 0) {
+                //Kalau habis, spawn PowerUp baru.
                 spawnRandomPowerUp();
+                //Timer di-reset ke angka acak antara 8–15 detik.
                 powerUpSpawnTimer = 8f + random.nextFloat() * 7f;
             }
-
+            //Perbarui posisi dan logika dari Pacman, Ghost, dan PowerUp.
             pacman.update(delta);
             for (Ghost ghost : ghosts) { ghost.update(delta); }
             for (PowerUp powerUp : powerUps) { powerUp.update(delta); }
-
+            //Cek apakah Pacman menyentuh dot, PowerUp, atau Ghost.
             checkDotCollisions();
             checkPowerUpCollisions();
             checkGhostCollisions();
-
+            //Kalau semua titik (dot) habis, berarti menang.
             if (dots.size == 0) {
                 currentState = GameState.GAME_WON;
             }
+            //Jika dalam mode RESPWANING/hidup ulang
         } else if (currentState == GameState.RESPAWNING) {
+            //Kalau Pacman mati dan sedang nunggu respawn:
             respawnTimer -= delta;
+            //Tunggu beberapa detik (respawnTimer) → setelah itu reset posisi dan lanjut main lagi.
             if (respawnTimer <= 0) {
                 resetPositionsAfterDeath();
                 currentState = GameState.PLAYING;
@@ -185,6 +226,7 @@ public class Main extends ApplicationAdapter {
         }
 
         if (powerUpRemainingTime > 0) {
+            //Hitung mundur durasi PowerUp (misalnya efek "makan Ghost").
             powerUpRemainingTime -= delta;
             if (powerUpRemainingTime <= 0 && musicScared != null) {
                 musicScared.stop();
@@ -201,25 +243,31 @@ public class Main extends ApplicationAdapter {
     }
 
     private void checkGhostCollisions() {
+        //Mengecek apakah permainan sedang berjalan
         if (currentState != GameState.PLAYING) return;
-
+        //ni adalah bounding box (kotak pembatas) untuk Pacman.
+        //Digunakan untuk mendeteksi tabrakan dengan Ghost.
         Rectangle pacmanBounds = new Rectangle(pacman.getPosition().x, pacman.getPosition().y, pacman.getSize().x, pacman.getSize().y);
         for (Ghost ghost : ghosts) {
+            //Membuat bounding box untuk Ghost.
             Rectangle ghostBounds = new Rectangle(ghost.getPosition().x, ghost.getPosition().y, ghost.getSize().x, ghost.getSize().y);
             if (pacmanBounds.overlaps(ghostBounds)) {
+               // Mengecek apakah kotak Ghost dan Pacman saling tumpang tindih (tabrakan).
                 if (ghost.isScared()) {
                     ghost.respawn();
-                    score += 200;
+                    //Ghost akan dihapus dari map dan dikembalikan ke kandang.
+                    score += 200;//tambah score 200
                 } else if (!pacman.isPoweredUp()) {
+                    //Pacman mati (animasi, suara).
                     pacman.die();
                     soundDie = Gdx.audio.newSound(Gdx.files.internal("Pac-Man Death - Sound Effect (HD).mp3"));
                     soundDie.play();
-                    lives--;
+                    lives--;//darah berkurang
                     if (lives <= 0) {
-                        currentState = GameState.GAME_OVER;
+                        currentState = GameState.GAME_OVER;// game kalah
                     } else {
-                        currentState = GameState.RESPAWNING;
-                        respawnTimer = 1.5f;
+                        currentState = GameState.RESPAWNING; //hidup kembali
+                        respawnTimer = 1.5f; //1.5 detik untuk respawn
                     }
                 }
             }
@@ -235,14 +283,14 @@ public class Main extends ApplicationAdapter {
     }
 
     private void restartGame() {
-        disposeCurrentGameAssets();
-        startGame();
+        disposeCurrentGameAssets(); //// Bersihkan semua objek/aset yang sedang dipakai
+        startGame(); //Mulai game dari awal
     }
 
     private void disposeCurrentGameAssets() {
-        if (pacman != null) pacman.dispose();
-        if(ghosts != null) { for(Ghost g : ghosts) g.dispose(); }
-        if(powerUps != null) { for(PowerUp p : powerUps) p.dispose(); }
+        if (pacman != null) pacman.dispose(); //hapus objek Pacman dari memori (jika ada).
+        if(ghosts != null) { for(Ghost g : ghosts) g.dispose(); } //semua Ghost dihapus satu per satu.
+        if(powerUps != null) { for(PowerUp p : powerUps) p.dispose(); } //semua item power-up (Cherry, PowerFood, dll) dibuang.
         if(music != null) music.stop();
     }
 
@@ -265,7 +313,6 @@ public class Main extends ApplicationAdapter {
         if (musicScared != null) {musicScared.stop();musicScared.dispose();}
     }
 
-    // Metode di bawah ini tidak ada perubahan, salin saja jika Anda belum punya
     private void renderMenu() {
         batch.begin();
         batch.draw(menuBackground, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
@@ -343,7 +390,6 @@ public class Main extends ApplicationAdapter {
                     musicScared.setLooping(true);
                     musicScared.play();
                     powerUpRemainingTime = 5f;
-
                 }
                 powerUp.collect();
             }

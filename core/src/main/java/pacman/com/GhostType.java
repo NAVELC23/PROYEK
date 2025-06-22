@@ -4,7 +4,7 @@ public enum GhostType {
     RED(1.1f), // Red Ghost with a speed multiplier
     PINK(1.1f), // Pink Ghost with a speed multiplier
     BLUE(1.1f), // Blue Ghost with a speed multiplier
-    ORANGE(1.1f); // Orange Ghost with a speed multiplier
+    ORANGE(1.05f); // Orange Ghost with a speed multiplier
 
     private float speedMultiplier; //
 

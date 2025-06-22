@@ -66,7 +66,6 @@ public class Ghost extends Entity {
     }
 
     private void move(float delta, Vector2 target, boolean isFleeing) {
-        // Logika pergerakan ini sudah bagus dan anti-stuck
         if (isAtTileCenter() || isAboutToHitWall()) {
             List<Vector2> validDirections = getValidDirections();
             if (!validDirections.isEmpty()) {
@@ -160,10 +159,6 @@ public class Ghost extends Entity {
         Vector2 checkPos = new Vector2(position).mulAdd(direction, 2.0f);
         Rectangle checkBounds = new Rectangle(checkPos.x, checkPos.y, size.x, size.y);
         return !maze.collidesWithWall(checkBounds);
-    }
-
-    public Rectangle getBounds() {
-        return new Rectangle(position.x, position.y, size.x, size.y);
     }
 
     private boolean isAtTileCenter() {
