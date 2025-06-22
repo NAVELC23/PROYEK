@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.badlogic.gdx.math.MathUtils.random;
+
 public class Maze {
     private final Texture wallTexture;
     private final List<Rectangle> walls;
@@ -27,7 +29,7 @@ public class Maze {
         "W.WW.W.WWWWW.W.WW.W",
         "W....W...W...W....W",
         "WWWW.WWW W WWW.WWWW",
-        "WWWW.W       W.WWWW",
+        "WWWW.W   G   W.WWWW",
         "WWWW.W WGGGW W.WWWW", // G = Ghost house
         "WWWW.W W...W W.WWWW",
         "WWWW.W WWWWW W.WWWW",
@@ -52,7 +54,7 @@ public class Maze {
         "W....... . .......W",
         "WWWW.WWWW WWWW.WWWW",
         "W....W       W....W",
-        "W.WW.W WW.WW W.WW.W",
+        "W.WW.W WWGWW W.WW.W",
         "W.WW.W WGGGW W.WW.W",
         "W.WW.W W...W W.WW.W",
         "W.WW.W WWWWW W.WW.W",
@@ -70,14 +72,14 @@ public class Maze {
 
     private final String[] layoutB = {
         "WWWWWWWWWWWWWWWWWWW",
-        "W.WWWWWW.W.WWWWWW.W",
+        "W...WW...W...WW...W",
         "W.W*...W.W.W...*W.W",
-        "W.W.W..W.W.W..W.W.W",
-        "W...W..W...W..W...W",
-        "W.WWWW.WWWWW.WWWW.W",
+        "W.W.W.WW.W.WW.W.W.W",
+        "W...W.........W...W",
+        "W.WWWW.WW.WW.WWWW.W",
         "W.................W",
         "WWWW.W.WWWWW.W.WWWW",
-        "WWWW.W.......W.WWWW",
+        "WWWW.W...G...W.WWWW",
         "WWWW.W WGGGW W.WWWW",
         "WWWW.W W...W W.WWWW",
         "WWWW.W WWWWW W.WWWW",
@@ -122,6 +124,18 @@ public class Maze {
                 }
             }
         }
+    }
+
+    public int[] findGhostSpawnTile() {
+        int numRows = currentLayout.length;
+        for (int row = 0; row < numRows; row++) {
+            for (int col = 0; col < currentLayout[row].length(); col++) {
+                if (currentLayout[row].charAt(col) == 'G') {
+                    return new int[]{col, numRows - 1 - row}; // Format: [tileX, tileY]
+                }
+            }
+        }
+        return new int[]{9, 10}; // Default tile (ghost house)
     }
 
     public void shiftLayout(int index) {
@@ -201,5 +215,15 @@ public class Maze {
         return currentLayoutIndex;
     }
 
+    public void shiftToRandomLayout() {
+        int newIndex;
+        do {
+            newIndex = random.nextInt(layouts.size());
+        } while (newIndex == currentLayoutIndex && layouts.size() > 1); // Hindari pengulangan layout yang sama
+
+        currentLayoutIndex = newIndex;
+        this.currentLayout = this.layouts.get(currentLayoutIndex);
+        initializeWalls();
+    }
 
 }

@@ -95,10 +95,16 @@ public class Main extends ApplicationAdapter {
         pacman = new Pacman(pacmanStartPos, maze);
 
         ghosts = new Array<>();
-        ghosts.add(new Ghost(new Vector2(9 * maze.getTileSize() + 5, 11 * maze.getTileSize() + 5), GhostType.RED, pacman, maze));
-        ghosts.add(new Ghost(new Vector2(8 * maze.getTileSize() + 5, 10 * maze.getTileSize() + 5), GhostType.PINK, pacman, maze));
-        ghosts.add(new Ghost(new Vector2(10 * maze.getTileSize() + 5, 10 * maze.getTileSize() + 5), GhostType.BLUE, pacman, maze));
-        ghosts.add(new Ghost(new Vector2(9 * maze.getTileSize() + 5, 9 * maze.getTileSize() + 5), GhostType.ORANGE, pacman, maze));
+        int[] spawnTile = maze.findGhostSpawnTile(); // Ambil tile [x, y]
+        float spawnX = spawnTile[0] * maze.getTileSize() + 5; // Konversi ke pixel + offset
+        float spawnY = spawnTile[1] * maze.getTileSize() + 5;
+
+        // Buat ghost di posisi 'G'
+        ghosts.add(new Ghost(spawnX, spawnY, GhostType.RED, pacman, maze));
+        ghosts.add(new Ghost(spawnX, spawnY, GhostType.PINK, pacman, maze));
+        ghosts.add(new Ghost(spawnX, spawnY, GhostType.BLUE, pacman, maze));
+        ghosts.add(new Ghost(spawnX, spawnY, GhostType.ORANGE, pacman, maze));
+
 
         dots = new Array<>();
         if (dotTexture == null) {
@@ -214,7 +220,7 @@ public class Main extends ApplicationAdapter {
             powerUpSpawnTimer -= delta;
             if (powerUpSpawnTimer <= 0) {
                 spawnRandomPowerUp();
-                powerUpSpawnTimer = 15f + random.nextFloat() * 10f;
+                powerUpSpawnTimer = 8f + random.nextFloat() * 7f;
             }
 
             if (!isWarningActive) { // Jangan update pergerakan saat labirin akan berubah untuk menghindari bug
@@ -248,14 +254,12 @@ public class Main extends ApplicationAdapter {
             if (warningTimer <= 0) {
                 isWarningActive = false;
 
-                if (isShiftSafe(nextLayoutIndex)) {
-                    maze.shiftLayout(nextLayoutIndex);
-                    if (soundShift != null) soundShift.play();
+                // Pilih layout berikutnya secara dinamis
+                maze.shiftToRandomLayout();
+                if (soundShift != null) soundShift.play();
 
-                    // --- PERBAIKAN #2: Hapus dot yang tidak valid, JANGAN buat ulang semua dot ---
-                    pruneInvalidDots();
-                }
-                mazeShiftTimer = 15f + random.nextFloat() * 5f;
+                pruneInvalidDots();
+                mazeShiftTimer = 15f + random.nextFloat() * 5f; // Reset timer
             }
         } else {
             mazeShiftTimer -= delta;
@@ -315,6 +319,8 @@ public class Main extends ApplicationAdapter {
 
         Rectangle pacmanBounds = new Rectangle(pacman.getPosition().x, pacman.getPosition().y, pacman.getSize().x, pacman.getSize().y);
         for (Ghost ghost : ghosts) {
+            if (ghost.isRespawning()) continue; // Skip ghost yang sedang respawn
+
             Rectangle ghostBounds = new Rectangle(ghost.getPosition().x, ghost.getPosition().y, ghost.getSize().x, ghost.getSize().y);
             if (pacmanBounds.overlaps(ghostBounds)) {
                 if (ghost.isScared()) {
@@ -338,9 +344,6 @@ public class Main extends ApplicationAdapter {
 
     private void resetPositionsAfterDeath() {
         pacman.respawn(); // Ganti ini dari sekedar set position
-        for(Ghost ghost : ghosts) {
-            ghost.respawn();
-        }
         pacman.setPoweredUp(false, 0);
     }
 
@@ -408,7 +411,7 @@ public class Main extends ApplicationAdapter {
     private void spawnRandomPowerUp() {
         int activePowerUpsCount = 0;
         for (PowerUp pu : powerUps) if (pu.isActive()) activePowerUpsCount++;
-        if (activePowerUpsCount >= 2) return;
+        if (activePowerUpsCount >= 4) return;
 
         float x, y;
         int attempts = 0;
@@ -423,9 +426,9 @@ public class Main extends ApplicationAdapter {
 
         if (attempts < 100) {
             float rand = random.nextFloat();
-            if (rand < 0.4f) powerUps.add(new Cherry(new Vector2(x, y)));
-            else if (rand < 0.8f) powerUps.add(new Cherry2(new Vector2(x, y)));
-            else powerUps.add(new PowerFood(new Vector2(x, y)));
+            if (rand < 0.35f) powerUps.add(new Cherry(new Vector2(x, y))); //35%
+            else if (rand < 0.55f) powerUps.add(new Cherry2(new Vector2(x, y))); //20%
+            else powerUps.add(new PowerFood(new Vector2(x, y)));//35%
         }
     }
 

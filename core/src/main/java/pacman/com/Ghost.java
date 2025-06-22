@@ -2,6 +2,7 @@ package pacman.com;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
@@ -19,28 +20,44 @@ public class Ghost extends Entity {
     private final Maze maze;
     private Vector2 currentDirection;
     private final Random random;
+    private boolean isRespawning; // Flag untuk menandai ghost sedang respawn
+    private float respawnDelay; // Waktu delay sebelum respawn (dalam detik)
+    private float respawnTimer; // Timer untuk menghitung delay respawn
 
     private final Texture normalTexture;
     private final Texture scaredTexture;
 
-    public Ghost(Vector2 startPosition, GhostType type, Pacman pacman, Maze maze) {
-        super(startPosition, GhostType.getTexturePath(type), new Vector2(30, 30));
+    public Ghost(float startX, float startY, GhostType type, Pacman pacman, Maze maze) {
+        super(new Vector2(startX, startY), GhostType.getTexturePath(type), new Vector2(30, 30));
+        this.startPosition = new Vector2(startX, startY);
 
         this.normalTexture = new Texture(GhostType.getTexturePath(type));
         this.scaredTexture = new Texture("scaredGhost.png");
         this.texture = normalTexture;
 
-        this.startPosition = new Vector2(startPosition);
+//        this.startPosition = new Vector2(startPosition);
         this.type = type;
         this.pacman = pacman;
         this.maze = maze;
         this.speed = type.getBaseSpeed();
         this.random = new Random();
         this.currentDirection = new Vector2(0, -1);
+
+        this.respawnDelay = 5.0f; // Set delay respawn 5 detik (bisa disesuaikan)
+        this.isRespawning = false;
+        this.respawnTimer = 0f;
     }
 
     @Override
     public void update(float delta) {
+        if (isRespawning) { //code waktu respawn
+            respawnTimer -= delta;
+            if (respawnTimer <= 0) {
+                isRespawning = false; // Selesai respawn, ghost bisa bergerak lagi
+            }
+            return; // Ghost tidak bergerak selama respawn
+        }
+
         if (isScared) {
             // Jika takut, lari kembali ke markas
             scaredTime -= delta;
@@ -194,13 +211,44 @@ public class Ghost extends Entity {
     }
 
     public boolean isScared() {
-        return isScared;
+        return isScared && !isRespawning;
+    }
+
+    public boolean isRespawning() { return isRespawning; }
+
+
+    @Override
+    public void render(SpriteBatch batch) {
+        // Jika ghost sedang respawn, beri efek visual
+        if (isRespawning) {
+            // Efek transparan (50% opacity)
+            batch.setColor(1, 1, 1, 0.5f); // RGBA: Alpha = 0.5 (setengah transparan)
+
+            // Atau efek berkedip (blinking)
+            if ((int)(respawnTimer * 5) % 2 == 0) { // Kedip setiap 0.2 detik (5 kali per detik)
+                batch.setColor(1, 1, 1, 0.3f); // Kedip lebih transparan
+            } else {
+                batch.setColor(1, 1, 1, 0.7f); // Kedip kurang transparan
+            }
+        }
+
+        // Gambar ghost
+        batch.draw(texture, position.x, position.y, size.x, size.y);
+
+        // Reset warna ke normal
+        batch.setColor(1, 1, 1, 1); // RGBA: Alpha = 1 (opaque)
     }
 
     public void respawn() {
-        position.set(startPosition);
-        setScared(false);
-        currentDirection.set(0, -1);
+        int[] spawnTile = maze.findGhostSpawnTile();
+        float spawnX = spawnTile[0] * maze.getTileSize() + 5; // +5 untuk center
+        float spawnY = spawnTile[1] * maze.getTileSize() + 5;
+        this.position.set(spawnX, spawnY);
+        this.isRespawning = true;
+        this.respawnTimer = respawnDelay; // Set timer ke delay yang ditentukan
+        this.position.set(startPosition); // Posisi tetap di reset, tapi ghost belum aktif
+        setScared(false); // Matikan mode scared
+        this.texture = normalTexture; // Kembalikan texture normal
     }
 
     @Override
