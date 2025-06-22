@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Maze {
@@ -12,9 +13,12 @@ public class Maze {
     private final float width;
     private final float height;
     private final float tileSize;
+    private String[] currentLayout;
 
+    private final List<String[]> layouts;
+    private int currentLayoutIndex;
     // --- DESAIN LABIRIN FINAL (19x22) ---
-    private final String[] layout = {
+    private final String[] originalLayout = {
         "WWWWWWWWWWWWWWWWWWW",
         "W........W........W",
         "W.WW.WWW.W.WWW.WW.W",
@@ -39,21 +43,78 @@ public class Maze {
         "WWWWWWWWWWWWWWWWWWW"
     };
 
+    private final String[] layoutA = {
+        "WWWWWWWWWWWWWWWWWWW",
+        "W.................W",
+        "W.WW.W.WWWWW.W.WW.W",
+        "W*...W...W...W...*W",
+        "W.WW.W.W W W.W.WW.W",
+        "W....... . .......W",
+        "WWWW.WWWW WWWW.WWWW",
+        "W....W       W....W",
+        "W.WW.W WW.WW W.WW.W",
+        "W.WW.W WGGGW W.WW.W",
+        "W.WW.W W...W W.WW.W",
+        "W.WW.W WWWWW W.WW.W",
+        "W....W       W....W",
+        "WWWW.WWW   WWW.WWWW",
+        "W......W W W......W",
+        "W.WW.W.W W W.W.WW.W",
+        "W*...W...W...W...*W",
+        "W.WW.W.WWWWW.W.WW.W",
+        "W.................W",
+        "W.WWWWWW.W.WWWWWW.W",
+        "W........W........W",
+        "WWWWWWWWWWWWWWWWWWW"
+    };
+
+    private final String[] layoutB = {
+        "WWWWWWWWWWWWWWWWWWW",
+        "W.WWWWWW.W.WWWWWW.W",
+        "W.W*...W.W.W...*W.W",
+        "W.W.W..W.W.W..W.W.W",
+        "W...W..W...W..W...W",
+        "W.WWWW.WWWWW.WWWW.W",
+        "W.................W",
+        "WWWW.W.WWWWW.W.WWWW",
+        "WWWW.W.......W.WWWW",
+        "WWWW.W WGGGW W.WWWW",
+        "WWWW.W W...W W.WWWW",
+        "WWWW.W WWWWW W.WWWW",
+        "WWWW.W.......W.WWWW",
+        "WWWW.W.WWWWW.W.WWWW",
+        "W.................W",
+        "W.WWWW.WWWWW.WWWW.W",
+        "W...W..W...W..W...W",
+        "W.W.W..W.W.W..W.W.W",
+        "W.W*...W.W.W...*W.W",
+        "W.WWWWWW.W.WWWWWW.W",
+        "W.................W",
+        "WWWWWWWWWWWWWWWWWWW"
+    };
+
     public Maze() {
         this.tileSize = 40f;
         this.wallTexture = new Texture("wall.png");
         this.walls = new ArrayList<>();
-        this.width = layout[0].length() * tileSize;
-        this.height = layout.length * tileSize;
+
+        this.layouts = new ArrayList<>();
+        this.layouts.add(originalLayout);
+        this.layouts.add(layoutA);
+        this.layouts.add(layoutB);
+
+        this.currentLayout = originalLayout;
+        this.width = currentLayout[0].length() * tileSize;
+        this.height = currentLayout.length * tileSize;
         initializeWalls();
     }
 
     private void initializeWalls() {
         walls.clear();
-        int numRows = layout.length;
+        int numRows = currentLayout.length;
         for (int row = 0; row < numRows; row++) {
-            for (int col = 0; col < layout[row].length(); col++) {
-                char symbol = layout[row].charAt(col);
+            for (int col = 0; col < currentLayout[row].length(); col++) {
+                char symbol = currentLayout[row].charAt(col);
                 if (symbol == 'W') { // Hanya 'W' yang dianggap dinding
                     float x = col * tileSize;
                     float y = (numRows - 1 - row) * tileSize;
@@ -61,6 +122,16 @@ public class Maze {
                 }
             }
         }
+    }
+
+    public void shiftLayout(int index) {
+        if (index < 0 || index >= layouts.size()) {
+            // Kembali ke layout original jika index tidak valid
+            this.currentLayout = this.originalLayout;
+        } else {
+            this.currentLayout = this.layouts.get(index);
+        }
+        initializeWalls(); // Bangun ulang dinding sesuai layout baru
     }
 
     public void render(SpriteBatch batch) {
@@ -79,18 +150,19 @@ public class Maze {
     }
 
     public boolean isWallAt(float x, float y) {
-        // Cek berdasarkan tile, bukan piksel, agar lebih akurat
         int tileX = (int) (x / tileSize);
         int tileY = (int) (y / tileSize);
-        int numRows = layout.length;
+        return isWallAtTile(tileX, tileY);
+    }
 
-        // Konversi koordinat Y game ke koordinat array
+    public boolean isWallAtTile(int tileX, int tileY) {
+        int numRows = currentLayout.length;
         int row = numRows - 1 - tileY;
 
-        if (row < 0 || row >= numRows || tileX < 0 || tileX >= layout[0].length()) {
-            return true; // Anggap di luar peta sebagai dinding
+        if (row < 0 || row >= numRows || tileX < 0 || tileX >= currentLayout[0].length()) {
+            return true;
         }
-        return layout[row].charAt(tileX) == 'W';
+        return currentLayout[row].charAt(tileX) == 'W';
     }
 
     public float getWidth() { return width; }
@@ -104,6 +176,30 @@ public class Maze {
     }
 
     public String[] getLayout() {
-        return layout;
+        return currentLayout;
     }
+
+    public boolean isTileSafeInLayout(int layoutIndex, int tileX, int tileY) {
+        if (layoutIndex < 0 || layoutIndex >= layouts.size()) {
+            return false;
+        }
+        String[] futureLayout = layouts.get(layoutIndex);
+        int numRows = futureLayout.length;
+        int row = numRows - 1 - tileY;
+
+        if (row < 0 || row >= numRows || tileX < 0 || tileX >= futureLayout[0].length()) {
+            return false;
+        }
+        return futureLayout[row].charAt(tileX) != 'W';
+    }
+
+    public int getLayoutCount() {
+        return layouts.size();
+    }
+
+    public int getCurrentLayoutIndex() {
+        return currentLayoutIndex;
+    }
+
+
 }
