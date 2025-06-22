@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -50,6 +51,12 @@ public class Main extends ApplicationAdapter {
     private Music music, musicScared;
     private Sound soundDie;
 
+    private float mazeShiftTimer;
+    private float warningTimer; // Waktu untuk peringatan sebelum labirin berubah
+    private boolean isWarningActive;
+    private int nextLayoutIndex;
+    private Sound soundWarning, soundShift;
+
     @Override
     public void create() {
         batch = new SpriteBatch();
@@ -67,6 +74,9 @@ public class Main extends ApplicationAdapter {
         viewport = new FitViewport(maze.getWidth(), maze.getHeight(), camera);
         viewport.apply(); // Terapkan viewport
         camera.position.set(viewport.getWorldWidth() / 2, viewport.getWorldHeight() / 2, 0);
+
+        //soundWarning = Gdx.audio.newSound(Gdx.files.internal("warning.mp3")); // Ganti dengan file suara Anda
+        //soundShift = Gdx.audio.newSound(Gdx.files.internal("shift.mp3")); // Ganti dengan file suara Anda
 
         // 3. MULAI GAME setelah semua komponen dasar siap
         startGame();
@@ -104,6 +114,12 @@ public class Main extends ApplicationAdapter {
         lives = 3;
         currentState = GameState.MENU; // Mulai dari menu
         gameTime = 0;
+
+        // --- Reset timer labirin ---
+        mazeShiftTimer = 20f; // Labirin akan berubah setiap 20 detik
+        warningTimer = 3f; // Peringatan muncul 3 detik sebelum berubah
+        isWarningActive = false;
+        // ------------------------
     }
 
     @Override
@@ -127,14 +143,47 @@ public class Main extends ApplicationAdapter {
 
         batch.begin();
 
-        maze.render(batch);
-        for (Rectangle dot : dots) { batch.draw(dotTexture, dot.x, dot.y, dot.width, dot.height); }
+        // --- EFEK VISUAL SAAT PERINGATAN AKTIF ---
+        if (isWarningActive) {
+            // Mengubah warna batch untuk render dinding menjadi merah sebagai tanda bahaya
+            batch.setColor(Color.RED);
+            maze.render(batch);
+            batch.setColor(Color.WHITE); // Kembalikan ke warna normal untuk objek lain
+        } else {
+            maze.render(batch);
+        }
+        // -----------------------------------------
+        Vector2 pacmanCenter = pacman.getCenter();
+        Vector2 pacmanDirection = pacman.getDirection().cpy().nor();
+        float tileSize = maze.getTileSize();
+        float maxDistance = 9 * tileSize;
+        float minDistance = 1 * tileSize;
+
+        for (Rectangle dot : dots) {
+            Vector2 dotCenter = new Vector2(dot.x + dot.width / 2, dot.y + dot.height / 2);
+            Vector2 toDot = new Vector2(dotCenter).sub(pacmanCenter);
+            float distance = toDot.len();
+
+            // Cek apakah dot berada di dalam jangkauan jarak pandang (1-9 tile)
+            if (distance >= minDistance && distance <= maxDistance) {
+                // Cek apakah dot berada di depan Pacman menggunakan dot product
+                // Jika hasil > 0, sudut antara arah pacman dan vektor ke dot < 90 derajat (berada di depan)
+                if (pacmanDirection.dot(toDot.nor()) > 0.3) { // Angka 0.3 memberikan sudut pandang sekitar 140 derajat
+                    batch.draw(dotTexture, dot.x, dot.y, dot.width, dot.height);
+                }
+            }
+        }
+
         for (PowerUp powerUp : powerUps) { if (powerUp.isActive()) powerUp.render(batch); }
         pacman.render(batch);
         for (Ghost ghost : ghosts) { ghost.render(batch); }
 
         font.draw(batch, "Score: " + score, 20, viewport.getWorldHeight() - 20);
         font.draw(batch, "Lives: " + lives, viewport.getWorldWidth() - 150, viewport.getWorldHeight() - 20);
+
+        if (isWarningActive) {
+            font.draw(batch, "MAZE SHIFT IN: " + String.format("%.1f", warningTimer), viewport.getWorldWidth() / 2 - 150, viewport.getWorldHeight() - 20);
+        }
 
         if (currentState == GameState.GAME_OVER) {
             font.draw(batch, "GAME OVER", viewport.getWorldWidth() / 2 - 100, viewport.getWorldHeight() / 2 + 50);
@@ -157,10 +206,20 @@ public class Main extends ApplicationAdapter {
 
         if (currentState == GameState.PLAYING) {
             gameTime += delta;
+
+            // --- LOGIKA UNTUK LABIRIN YANG HIDUP ---
+            handleMazeShift(delta);
+            // ----------------------------------------
+
             powerUpSpawnTimer -= delta;
             if (powerUpSpawnTimer <= 0) {
                 spawnRandomPowerUp();
                 powerUpSpawnTimer = 15f + random.nextFloat() * 10f;
+            }
+
+            if (!isWarningActive) { // Jangan update pergerakan saat labirin akan berubah untuk menghindari bug
+                pacman.update(delta);
+                for (Ghost ghost : ghosts) { ghost.update(delta); }
             }
 
             pacman.update(delta);
@@ -181,6 +240,74 @@ public class Main extends ApplicationAdapter {
                 currentState = GameState.PLAYING;
             }
         }
+    }
+
+    private void handleMazeShift(float delta) {
+        if (isWarningActive) {
+            warningTimer -= delta;
+            if (warningTimer <= 0) {
+                isWarningActive = false;
+
+                if (isShiftSafe(nextLayoutIndex)) {
+                    maze.shiftLayout(nextLayoutIndex);
+                    if (soundShift != null) soundShift.play();
+
+                    // --- PERBAIKAN #2: Hapus dot yang tidak valid, JANGAN buat ulang semua dot ---
+                    pruneInvalidDots();
+                }
+                mazeShiftTimer = 15f + random.nextFloat() * 5f;
+            }
+        } else {
+            mazeShiftTimer -= delta;
+            if (mazeShiftTimer <= 0) {
+                isWarningActive = true;
+                warningTimer = 3f;
+                if (soundWarning != null) soundWarning.play();
+
+                // --- PERBAIKAN #1: Pastikan layout baru berbeda dari yang sekarang ---
+                int currentLayoutIndex = maze.getCurrentLayoutIndex();
+                do {
+                    nextLayoutIndex = random.nextInt(maze.getLayoutCount());
+                } while (nextLayoutIndex == currentLayoutIndex);
+            }
+        }
+    }
+
+    private void pruneInvalidDots() {
+        float tileSize = maze.getTileSize();
+        // Gunakan iterator agar aman saat menghapus elemen dari Array
+        for (int i = dots.size - 1; i >= 0; i--) {
+            Rectangle dot = dots.get(i);
+            // Cek posisi tengah dot
+            float dotCenterX = dot.x + dot.width / 2;
+            float dotCenterY = dot.y + dot.height / 2;
+
+            if (maze.isWallAt(dotCenterX, dotCenterY)) {
+                dots.removeIndex(i); // Hapus dot jika posisinya sekarang adalah dinding
+            }
+        }
+    }
+
+    private boolean isShiftSafe(int layoutIndex) {
+        float tileSize = maze.getTileSize();
+
+        // Cek posisi Pacman
+        int pacmanTileX = (int) (pacman.getCenter().x / tileSize);
+        int pacmanTileY = (int) (pacman.getCenter().y / tileSize);
+        if (!maze.isTileSafeInLayout(layoutIndex, pacmanTileX, pacmanTileY)) {
+            return false; // Pacman tidak aman, batalkan perubahan
+        }
+
+        // Cek posisi semua hantu
+        for (Ghost ghost : ghosts) {
+            int ghostTileX = (int) (ghost.getCenter().x / tileSize);
+            int ghostTileY = (int) (ghost.getCenter().y / tileSize);
+            if (!maze.isTileSafeInLayout(layoutIndex, ghostTileX, ghostTileY)) {
+                return false; // Salah satu hantu tidak aman, batalkan perubahan
+            }
+        }
+
+        return true; // Semua aman, perubahan bisa dilanjutkan
     }
 
     private void checkGhostCollisions() {
